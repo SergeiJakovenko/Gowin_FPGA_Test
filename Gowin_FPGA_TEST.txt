@@ -1,0 +1,14 @@
+C:\Gowin_FPGA_Test/
+├── hdl/                       # Синтезируемый VHDL-код
+│   └── top_led_button.vhd
+├── src/                       # Дополнительные исходные модули
+├── sim/                       # Тестбенчи и файлы настройки волн ModelSim
+│   ├── top_led_button_tb.vhd
+│   └── wave.do
+├── pdf/                       # Сохраненные временные диаграммы (PDF)
+├── server/                    # Python-сервер (PySerial + Flask)
+│   └── app.py
+├── web/                       # Веб-интерфейс
+│   └── index.html
+└── scripts/                   # PowerShell скрипты автоматизации
+    └── run_task_v1.ps1        # Скрипт запуска задачи №1 (Тест кнопки и LED)
