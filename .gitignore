@@ -2,3 +2,12 @@ work/
 *log
 *.wlf
 transcript
+
+# Python
+__pycache__/
+*.pyc
+
+# Gowin EDA / Synthesis build output
+impl/
+*.fs
+*.db

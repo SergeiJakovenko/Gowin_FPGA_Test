@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ПЛИС — Бегущий Бит</title>
+    <style>
+        body {
+            background-color: #121214;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #1e1e24;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            width: 420px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #ffffff;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .badge {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+        .badge.connected { background-color: #2e7d32; color: #fff; }
+        .badge.disconnected { background-color: #c62828; color: #fff; }
+        
+        .val-box {
+            background-color: #121214;
+            border: 2px solid #2e7d32;
+            border-radius: 10px;
+            text-align: center;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .val-title {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+        .val-display {
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: #4caf50;
+        }
+        .logs {
+            background-color: #0a0a0c;
+            border-radius: 6px;
+            padding: 10px;
+            height: 140px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #81c784;
+            border: 1px solid #2a2a30;
+            margin-bottom: 20px;
+        }
+        .log-item { margin-bottom: 4px; }
+
+        /* Стиль для кнопки остановки */
+        .btn-stop {
+            width: 100%;
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-stop:hover {
+            background-color: #b71c1c;
+        }
+        .btn-stop:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Мониторинг процесса ПЛИС</h2>
+        <div class="status-bar">
+            <span>Статус WS:</span>
+            <span id="status" class="badge disconnected">ОТКЛЮЧЕНО</span>
+        </div>
+
+        <div class="val-box">
+            <div class="val-title">Текущее значение от ПЛИС</div>
+            <div id="value" class="val-display">—</div>
+        </div>
+
+        <div>
+            <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 5px;">Консоль событий:</div>
+            <div id="logs" class="logs"></div>
+        </div>
+
+        <button id="stopBtn" class="btn-stop" onclick="shutdownServer()">Завершить сервер и закрыть</button>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const valueEl = document.getElementById('value');
+        const logsEl = document.getElementById('logs');
+        const stopBtn = document.getElementById('stopBtn');
+        let ws = null;
+        let isShuttingDown = false;
+
+        function log(msg) {
+            const time = new Date().toLocaleTimeString();
+            const item = document.createElement('div');
+            item.className = 'log-item';
+            item.textContent = `[${time}] ${msg}`;
+            logsEl.appendChild(item);
+            logsEl.scrollTop = logsEl.scrollHeight;
+        }
+
+        function connect() {
+            ws = new WebSocket('ws://localhost:8765');
+
+            ws.onopen = () => {
+                statusEl.textContent = 'ПОДКЛЮЧЕНО';
+                statusEl.className = 'badge connected';
+                log('Соединение с сервером установлено');
+            };
+
+            ws.onmessage = (event) => {
+                const val = event.data;
+                valueEl.textContent = val;
+                log(`RX от ПЛИС: "${val}"`);
+            };
+
+            ws.onclose = () => {
+                statusEl.textContent = 'ОТКЛЮЧЕНО';
+                statusEl.className = 'badge disconnected';
+                
+                if (!isShuttingDown) {
+                    log('Соединение разорвано. Повтор через 2 сек...');
+                    setTimeout(connect, 2000);
+                } else {
+                    log('Сервер успешно остановлен.');
+                }
+            };
+
+            ws.onerror = (err) => {
+                ws.close();
+            };
+        }
+
+        function shutdownServer() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                if (confirm("Завершить работу Python-сервера и закрыть страницу?")) {
+                    isShuttingDown = true;
+                    stopBtn.disabled = true;
+                    stopBtn.textContent = "Остановка...";
+                    
+                    ws.send("SHUTDOWN");
+                    log("Отправлена команда на остановку сервера");
+
+                    setTimeout(() => {
+                        window.close(); // Закрываем вкладку браузера
+                    }, 400);
+                }
+            } else {
+                alert("Сервер не подключен!");
+            }
+        }
+
+        connect();
+    </script>
+</body>
+</html>
